@@ -1,6 +1,7 @@
 
 import * as THREE from 'three';
 import * as dat from 'dat.gui';
+import interact from 'interactjs';
 
 import {Tile} from './Tile';
 
@@ -37,7 +38,8 @@ const params = {
     tileSelector: null,
     colorController: null,
     cornerFolders: [],
-    tileColor: 0xffffff
+    tileColor: 0xffffff,
+    tileFolder: null,
 };
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -61,6 +63,16 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const selectedTile = tiles.find(tile => tile.id === parseInt(params.selectedTileId));
+    if (selectedTile) {
+        selectedTile.corners.forEach((corner, index) => {
+            const handle = document.getElementById(`corner-handle-${index}`);
+            if (handle) {
+                positionHandle(handle, corner);
+            }
+        });
+    }
 }
 
 // 5. Animation Loop
@@ -85,10 +97,10 @@ animate();
 
 function addTile() {
     const tile = new Tile(tileCount);
-    tile.mesh.position.x = (tileCount - (tileCount - 1) / 2) * 1.1; // Position the tile
     scene.add(tile.mesh);
     tiles.push(tile);
     tileCount++;
+    params.selectedTileId = tile.id;
 
     // Update GUI with the new tile
     updateTileList();
@@ -160,6 +172,9 @@ function updateTileSettings() {
 
     // Update the corner point controls for the selected tile
     updateCornerControls(selectedTile);
+
+    // Create corner handles for the selected tile
+    createCornerHandles(selectedTile);
 }
 
 // Function to update the corner point controls for a tile
@@ -171,8 +186,59 @@ function updateCornerControls(tile) {
     // Add a folder for each corner
     tile.corners.forEach((corner, index) => {
         const cornerFolder = params.tileFolder.addFolder(`Corner ${index + 1}`);
-        cornerFolder.add(corner, 'x', -5, 5).onChange(() => tile.updateGeometry());
-        cornerFolder.add(corner, 'y', -5, 5).onChange(() => tile.updateGeometry());
+        cornerFolder.add(corner, 'x', -5, 5).onChange(() => {
+            tile.updateGeometry();
+            positionHandle(document.getElementById(`corner-handle-${index}`), corner);
+        });
+        cornerFolder.add(corner, 'y', -5, 5).onChange(() => {
+            tile.updateGeometry();
+            positionHandle(document.getElementById(`corner-handle-${index}`), corner);
+        });
         params.cornerFolders.push(cornerFolder);
     });
+}
+// Function to create draggable corner handles for a tile
+function createCornerHandles(tile) {
+    // Remove existing handles
+    const cornerHandlesDiv = document.getElementById('corner-handles');
+    cornerHandlesDiv.innerHTML = '';
+
+    tile.corners.forEach((corner, index) => {
+        const handle = document.createElement('div');
+        handle.className = 'corner-handle';
+        handle.id = `corner-handle-${index}`;
+        cornerHandlesDiv.appendChild(handle);
+
+        positionHandle(handle, corner);
+
+        interact(handle).draggable({
+            onmove: event => {
+                const deltaX = event.dx / (window.innerWidth / 2);
+                const deltaY = -event.dy / (window.innerHeight / 2);
+
+                corner.x += deltaX * 5; // Adjust scaling factor as needed
+                corner.y += deltaY * 5;
+
+                positionHandle(handle, corner);
+                tile.updateGeometry();
+            }
+        });
+    });
+}
+
+// Function to position a handle based on the corner's coordinates
+function positionHandle(handle, corner) {
+    // Convert the corner coordinates to a THREE.Vector3
+    const cornerVector = new THREE.Vector3(corner.x, corner.y, 0);
+
+    // Project the vector to screen space using the camera
+    cornerVector.project(camera);
+
+    // Convert the projected coordinates to pixel values
+    const x = (cornerVector.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (cornerVector.y * -0.5 + 0.5) * window.innerHeight;
+
+    // Set the handle's position
+    handle.style.left = `${x}px`;
+    handle.style.top = `${y}px`;
 }
