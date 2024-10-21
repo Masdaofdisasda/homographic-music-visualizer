@@ -6,8 +6,10 @@ export class Tile {
         this.originalColor = color; // Store original color
         this.color = color;
         this.geometry = new THREE.BufferGeometry();
-        this.material = new THREE.MeshBasicMaterial({
+        this.material = new THREE.MeshStandardMaterial({
             color: this.color,
+            emissive: this.color,
+            emissiveStrength: 1.0,
             side: THREE.DoubleSide,
         });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
@@ -50,5 +52,6 @@ export class Tile {
     setColor(color) {
         this.color = color;
         this.material.color.set(color);
+        this.material.emissive.set(color);
     }
 }

@@ -76,13 +76,15 @@ const params = {
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.toneMapping = THREE.AgXToneMapping; // Use a tone mapping method
-renderer.toneMappingExposure = 1.0; // Adjust exposure based on the effect you want
+renderer.toneMappingExposure = 0.7; // Adjust exposure based on the effect you want
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 
 const scene = new THREE.Scene();
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Soft white light
+scene.add(ambientLight);
 
 const camera = new THREE.PerspectiveCamera(
     45,
@@ -149,20 +151,32 @@ function animate() {
 
     composer.render();
 }
+
+let lastBeatTime = 0;
+const bpm = 120; // Estimated BPM of the track
+const beatInterval = (60 / bpm) * 1000; // Interval between beats in milliseconds
+
+
 function updateVisuals(normLowFreq, normMidFreq, normHighFreq) {
-    // Change a random tile color when low frequency exceeds threshold
-    if (normLowFreq * params.audioSensitivity > params.audioThreshholdLow) {
-        // Change multiple tiles instead of just one
-        const numTilesToChange = Math.floor(Math.random() * 3) + 1; // Randomly select 1-3 tiles
-        for (let i = 0; i < tiles.length; i++) {
-            const targetTile = tiles[Math.floor(Math.random() * tiles.length)];
-            // Allow higher than 1 color values (HDR)
-            const color = new THREE.Color(
-                Math.random(),  // Red
-                Math.random(),  // Green
-                Math.random()   // Blue
-            );
-            targetTile.setColor(color);
+    const currentTime = performance.now(); // Current time in milliseconds
+
+    // Check if the current time has passed the next beat interval
+    if (currentTime - lastBeatTime > beatInterval) {
+        lastBeatTime = currentTime; // Update the last beat time
+
+        if (normLowFreq * params.audioSensitivity > params.audioThreshholdHigh) {
+            // Change multiple tiles instead of just one
+            const numTilesToChange = 1; //Math.floor(Math.random() * 3) + 1; // Randomly select 1-3 tiles
+            for (let i = 0; i < numTilesToChange; i++) {
+                const targetTile = tiles[Math.floor(Math.random() * tiles.length)];
+                // Allow higher than 1 color values (HDR)
+                const color = new THREE.Color(
+                    Math.random(),  // Red
+                    Math.random(),  // Green
+                    Math.random()   // Blue
+                );
+                targetTile.setColor(color);
+            }
         }
     }
 
@@ -173,18 +187,18 @@ function updateVisuals(normLowFreq, normMidFreq, normHighFreq) {
         color.getHSL(hsl);
 
         // Adjust saturation based on high frequencies
-        hsl.s = THREE.MathUtils.clamp(normHighFreq, params.audioThreshholdHigh, 1);
+        hsl.s = 1; //THREE.MathUtils.clamp(normHighFreq, params.audioThreshholdHigh, 1);
         // Adjust lightness based on mid frequencies to create a bloom/brightness effect
-        hsl.l = THREE.MathUtils.clamp(hsl.l + normMidFreq * 0.4, 0, 1.1); // Allow lightness above 1
+        hsl.l = THREE.MathUtils.clamp(hsl.l + normMidFreq * 0.4, 0.7, 1.1); // Allow lightness above 1
 
         color.setHSL(hsl.h, hsl.s, hsl.l);
         tile.material.color.set(color);
     });
 
     // Update bloom strength dynamically based on frequency
-    bloomPass.strength = 0.1 +  normLowFreq * 0.8; // Increase bloom with bass
-    bloomPass.radius = THREE.MathUtils.clamp(normMidFreq * 0.005, 0, 0.1); // Adjust bloom radius with mids
-    bloomPass.threshold = 0.85 - normHighFreq * 0.1; // Adjust threshold with highs
+    bloomPass.strength = 0.1 +  normLowFreq * 0.3; // Increase bloom with bass
+    //bloomPass.radius = THREE.MathUtils.clamp(normMidFreq * 0.005, 0, 0.1); // Adjust bloom radius with mids
+    bloomPass.threshold = 0.7 - normHighFreq * 1.0; // Adjust threshold with highs
 }
 
 
