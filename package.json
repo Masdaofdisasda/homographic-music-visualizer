@@ -1,0 +1,43 @@
+{
+  "name": "music-visualization",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview",
+    "electron:dev": "vite build && electron .",
+    "electron:build": "vite build && electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^33.0.1",
+    "electron-builder": "^25.1.8",
+    "vite": "^5.4.9"
+  },
+  "dependencies": {
+    "dat.gui": "^0.7.9",
+    "gl-matrix": "^3.4.3",
+    "interactjs": "^1.10.27",
+    "three": "^0.169.0"
+  },
+  "build": {
+    "appId": "com.yourdomain.musicvisualization",
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "preload.js"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
