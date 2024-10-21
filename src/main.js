@@ -1,18 +1,10 @@
-// src/main.src
 
-// Import Three.src
 import * as THREE from 'three';
-
-// Import gl-matrix
-import { mat3 } from 'gl-matrix';
-
-// Import dat.GUI
 import * as dat from 'dat.gui';
 
-// Import Interact.src
-import interact from 'interactjs';
+import {Tile} from './Tile';
 
-
+// Audio API
 let audioContext;
 let analyser;
 let dataArray;
@@ -34,15 +26,26 @@ navigator.mediaDevices.getUserMedia({ audio: true, video: false })
         console.error('Error accessing microphone:', err);
     });
 
-// 1. Initialize Renderer
+// Global variables
+let tiles = [];
+let tileCount = 0;
+
+// Parameters for the GUI
+const params = {
+    audioSensitivity: 1.0,
+    selectedTileId: null,
+    tileSelector: null,
+    colorController: null,
+    cornerFolders: [],
+    tileColor: 0xffffff
+};
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// 2. Create Scene
 const scene = new THREE.Scene();
 
-// 3. Set Up Camera
 const camera = new THREE.PerspectiveCamera(
     45,
     window.innerWidth / window.innerHeight,
@@ -68,10 +71,10 @@ function animate() {
         analyser.getByteFrequencyData(dataArray);
         const avgFrequency = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
 
-        // Use audio data to update tiles
-        tiles.forEach((tile, index) => {
+        // Update each tile based on audio data
+        tiles.forEach(tile => {
             const scale = 1 + (avgFrequency / 256) * params.audioSensitivity;
-            tile.scale.set(scale, scale, scale);
+            tile.mesh.scale.set(scale, scale, scale);
         });
     }
 
@@ -80,32 +83,96 @@ function animate() {
 
 animate();
 
-// 6. Create Tiles
-const tiles = [];
-const tileCount = 4; // Example: 4 panels
-const tileGeometry = new THREE.PlaneGeometry(1, 1);
-const tileMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-
-for (let i = 0; i < tileCount; i++) {
-    const tile = new THREE.Mesh(tileGeometry, tileMaterial.clone());
-    tile.position.x = (i - (tileCount - 1) / 2) * 1.1; // Spread tiles out
-    scene.add(tile);
+function addTile() {
+    const tile = new Tile(tileCount);
+    tile.mesh.position.x = (tileCount - (tileCount - 1) / 2) * 1.1; // Position the tile
+    scene.add(tile.mesh);
     tiles.push(tile);
+    tileCount++;
+
+    // Update GUI with the new tile
+    updateTileList();
 }
 
-// 7. Initialize dat.GUI
+// Initialize dat.GUI
 const gui = new dat.GUI();
 
-// 8. Parameters Object
-const params = {
-    tileColor: 0xffffff,
-    audioSensitivity: 1.0,
-};
+// Add GUI elements
+initializeGUI();
+addTile(); // Add an initial tile
+updateTileList(); // Populate the GUI with the initial tile
 
-gui.addColor(params, 'tileColor').name('Tile Color').onChange((value) => {
-    tiles.forEach(tile => {
-        tile.material.color.set(value);
+
+// Function to initialize the GUI structure
+function initializeGUI() {
+    // Add the "Add Tile" button
+    gui.add({ addTile }, 'addTile').name('Add Tile');
+
+    // Add audio sensitivity control
+    gui.add(params, 'audioSensitivity', 0, 5).name('Audio Sensitivity');
+
+    // Add a color picker for general tile color change
+    gui.addColor(params, 'tileColor').name('Global Tile Color').onChange((value) => {
+        tiles.forEach(tile => tile.setColor(value));
     });
-});
 
-gui.add(params, 'audioSensitivity', 0, 5).name('Audio Sensitivity');
+    // Create a folder for individual tile settings
+    params.tileFolder = gui.addFolder('Tile Settings');
+    params.tileFolder.open();
+}
+
+// Function to update the tile list in the GUI
+function updateTileList() {
+    // Remove the existing tile selector if it exists
+    if (params.tileSelector) {
+        params.tileFolder.remove(params.tileSelector);
+    }
+
+    // Get a list of tile IDs to populate the dropdown
+    const tileIds = tiles.map(tile => tile.id.toString());
+    params.selectedTileId = tileIds[0] || null; // Set to the first tile or null if no tiles exist
+
+    // Add a new tile selector control to the GUI
+    params.tileSelector = params.tileFolder.add(params, 'selectedTileId', tileIds)
+        .name('Select Tile')
+        .onChange(updateTileSettings);
+
+    // Call updateTileSettings to reflect the initial selection if there are tiles
+    if (params.selectedTileId !== null) {
+        updateTileSettings();
+    }
+}
+
+// Function to update the settings for the selected tile
+function updateTileSettings() {
+    // Find the selected tile based on its ID
+    const selectedTile = tiles.find(tile => tile.id.toString() === params.selectedTileId);
+
+    if (!selectedTile) return;
+
+    // Update tile-specific color control
+    if (params.colorController) {
+        params.tileFolder.remove(params.colorController);
+    }
+    params.colorController = params.tileFolder.addColor(selectedTile, 'color')
+        .name('Tile Color')
+        .onChange(value => selectedTile.setColor(value));
+
+    // Update the corner point controls for the selected tile
+    updateCornerControls(selectedTile);
+}
+
+// Function to update the corner point controls for a tile
+function updateCornerControls(tile) {
+    // Remove existing corner folders if any
+    params.cornerFolders.forEach(folder => params.tileFolder.removeFolder(folder));
+    params.cornerFolders = [];
+
+    // Add a folder for each corner
+    tile.corners.forEach((corner, index) => {
+        const cornerFolder = params.tileFolder.addFolder(`Corner ${index + 1}`);
+        cornerFolder.add(corner, 'x', -5, 5).onChange(() => tile.updateGeometry());
+        cornerFolder.add(corner, 'y', -5, 5).onChange(() => tile.updateGeometry());
+        params.cornerFolders.push(cornerFolder);
+    });
+}
