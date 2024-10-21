@@ -3,6 +3,7 @@ import * as THREE from 'three';
 export class Tile {
     constructor(id, color = 0xffffff) {
         this.id = id;
+        this.originalColor = color; // Store original color
         this.color = color;
         this.geometry = new THREE.BufferGeometry();
         this.material = new THREE.MeshBasicMaterial({
@@ -41,13 +42,13 @@ export class Tile {
         this.geometry.attributes.position.needsUpdate = true;
     }
 
-    setColor(color) {
-        this.color = color;
-        this.material.color.set(color);
-    }
-
     setCorner(index, x, y) {
         this.corners[index] = { x, y };
         this.updateGeometry();
+    }
+
+    setColor(color) {
+        this.color = color;
+        this.material.color.set(color);
     }
 }
