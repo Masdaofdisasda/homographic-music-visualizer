@@ -2,6 +2,7 @@
   "name": "music-visualization",
   "version": "1.0.0",
   "description": "",
+  "main": "src/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -28,6 +29,7 @@
     "files": [
       "dist/**/*",
       "main.js",
+      "src/main.js",
       "preload.js"
     ],
     "mac": {

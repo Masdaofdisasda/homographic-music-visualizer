@@ -60,12 +60,39 @@ function setupFrequencyBins() {
 let tiles = [];
 let tileCount = 0;
 
+// Function to save tiles to localStorage
+function saveTiles() {
+    const tilesData = tiles.map(tile => tile.toObject());
+    localStorage.setItem('tiles', JSON.stringify(tilesData));
+}
+
+// Function to load tiles from localStorage
+function loadTiles() {
+    const tilesData = JSON.parse(localStorage.getItem('tiles'));
+
+    if (tilesData) {
+        tiles = tilesData.map(data => Tile.fromObject(data));
+        tiles.forEach(tile => {
+            scene.add(tile.mesh);
+        });
+        tileCount = tiles.length;
+    }
+}
+
 // Parameters for the GUI
 const params = {
-    audioSensitivity: 1.0,
-    audioThreshholdLow: 0.1,
-    audioThreshholdMid: 0.1,
-    audioThreshholdHigh: 0.1,
+    audioSensitivityLow: 0.0,
+    audioSensitivityMid: 0.0,
+    audioSensitivityHigh: 0.0,
+    normLowFreq: 0,
+    normMidFreq: 0,
+    normHighFreq: 0,
+    changeColor: true,
+    changeSaturation: true,
+    changeLightness: true,
+    useBloom: true,
+    bpm: 120,
+    changeLightsUpTo: 1,
     selectedTileId: null,
     tileSelector: null,
     colorController: null,
@@ -75,16 +102,17 @@ const params = {
 };
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.toneMapping = THREE.AgXToneMapping; // Use a tone mapping method
-renderer.toneMappingExposure = 0.7; // Adjust exposure based on the effect you want
+renderer.toneMapping = THREE.ACESFilmicToneMapping; // Use a tone mapping method
+renderer.toneMappingExposure = 1.0; // Adjust exposure based on the effect you want
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-
 const scene = new THREE.Scene();
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Soft white light
-scene.add(ambientLight);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+directionalLight.position.set(0,0,1);
+directionalLight.set
+scene.add(directionalLight);
 
 const camera = new THREE.PerspectiveCamera(
     45,
@@ -99,13 +127,14 @@ composer.addPass(new RenderPass(scene, camera));
 
 const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.1, // Strength
-    0.1, // Radius
-    0.5 // Threshold
+    0.1,
+    0.1,
+    0.5
 );
 composer.addPass(bloomPass);
-// 4. Handle Window Resize
+
 window.addEventListener('resize', onWindowResize, false);
+
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -140,65 +169,73 @@ function animate() {
         const avgMidFreq = midFreqData.reduce((sum, value) => sum + value, 0) / midFreqData.length;
         const avgHighFreq = highFreqData.reduce((sum, value) => sum + value, 0) / highFreqData.length;
 
-        // Normalize amplitudes to range [0, 1]
-        const normLowFreq = avgLowFreq / dataArray.length;
-        const normMidFreq = avgMidFreq / dataArray.length;
-        const normHighFreq = avgHighFreq / dataArray.length;
+        // Normalize amplitudes to range [0, 1], amplify based on sensitivity
+        function boostValue(x, k) {
+            if (k === 0) return x;
+            const e = Math.exp(k);
+            return (Math.exp(k * x) - 1) / (e - 1);
+        }
+        params.lowFreqData = boostValue(avgLowFreq / dataArray.length, params.audioSensitivityLow);
+        params.midFreqData = boostValue(avgMidFreq / dataArray.length, params.audioSensitivityMid);
+        params.highFreqData = boostValue(avgHighFreq / dataArray.length, params.audioSensitivityHigh);
+
 
         // Update visuals based on frequency data
-        updateVisuals(normLowFreq, normMidFreq, normHighFreq);
+        updateVisuals(params.lowFreqData, params.midFreqData, params.highFreqData);
     }
 
     composer.render();
 }
 
 let lastBeatTime = 0;
-const bpm = 120; // Estimated BPM of the track
-const beatInterval = (60 / bpm) * 1000; // Interval between beats in milliseconds
+const beatInterval = (60 / params.bpm) * 1000; // Interval between beats in milliseconds
 
 
 function updateVisuals(normLowFreq, normMidFreq, normHighFreq) {
     const currentTime = performance.now(); // Current time in milliseconds
 
     // Check if the current time has passed the next beat interval
-    if (currentTime - lastBeatTime > beatInterval) {
+    if (params.changeColor && currentTime - lastBeatTime > beatInterval && normLowFreq > 0.9) {
         lastBeatTime = currentTime; // Update the last beat time
 
-        if (normLowFreq * params.audioSensitivity > params.audioThreshholdHigh) {
-            // Change multiple tiles instead of just one
-            const numTilesToChange = 1; //Math.floor(Math.random() * 3) + 1; // Randomly select 1-3 tiles
-            for (let i = 0; i < numTilesToChange; i++) {
-                const targetTile = tiles[Math.floor(Math.random() * tiles.length)];
-                // Allow higher than 1 color values (HDR)
-                const color = new THREE.Color(
-                    Math.random(),  // Red
-                    Math.random(),  // Green
-                    Math.random()   // Blue
-                );
-                targetTile.setColor(color);
-            }
+        // Change tile colors randomly
+        const numTilesToChange = params.changeLightsUpTo;
+        for (let i = 0; i < numTilesToChange; i++) {
+            const targetTile = tiles[Math.floor(Math.random() * tiles.length)];
+
+            const color = new THREE.Color();
+            color.setHSL(Math.random(), 0.9, 0.5);
+            targetTile.setColor(color);
         }
     }
 
-    // Adjust saturation and brightness of all tiles based on high frequencies
-    tiles.forEach(tile => {
-        const color = new THREE.Color(tile.originalColor);
-        const hsl = {};
-        color.getHSL(hsl);
+    if (params.changeSaturation) {
+        tiles.forEach(tile => {
+            const color = new THREE.Color(tile.color);
+            const hsl = {};
+            color.getHSL(hsl);
 
-        // Adjust saturation based on high frequencies
-        hsl.s = 1; //THREE.MathUtils.clamp(normHighFreq, params.audioThreshholdHigh, 1);
-        // Adjust lightness based on mid frequencies to create a bloom/brightness effect
-        hsl.l = THREE.MathUtils.clamp(hsl.l + normMidFreq * 0.4, 0.7, 1.1); // Allow lightness above 1
+            // Adjust saturation based on high frequencies
+            hsl.s = 0.3 + normHighFreq * 0.6; // Increase saturation with highs
 
-        color.setHSL(hsl.h, hsl.s, hsl.l);
-        tile.material.color.set(color);
-    });
+            // Adjust lightness based on mid frequencies to create a bloom/brightness effect
+            //hsl.l = 0.5 + normMidFreq * 0.5; // Increase lightness with mids
 
-    // Update bloom strength dynamically based on frequency
-    bloomPass.strength = 0.1 +  normLowFreq * 0.3; // Increase bloom with bass
-    //bloomPass.radius = THREE.MathUtils.clamp(normMidFreq * 0.005, 0, 0.1); // Adjust bloom radius with mids
-    bloomPass.threshold = 0.7 - normHighFreq * 1.0; // Adjust threshold with highs
+            color.setHSL(hsl.h, hsl.s, hsl.l);
+            tile.material.color.set(color);
+        });
+    }
+
+    if (params.changeLightness) {
+        //directionalLight.intensity = 0.5 + normLowFreq * 0.5;
+        bloomPass.strength = 0.1 +  normLowFreq * 0.2; // Increase bloom with bass
+        bloomPass.radius = 0.1 + normMidFreq * 0.2; // Adjust radius with mids
+        //bloomPass.threshold = 0.7 - normHighFreq * 1.0; // Adjust threshold with highs
+    }
+
+    if (!params.useBloom) {
+        bloomPass.strength = 0;
+    }
 }
 
 
@@ -221,7 +258,10 @@ const gui = new dat.GUI();
 
 // Add GUI elements
 initializeGUI();
-addTile(); // Add an initial tile
+loadTiles();
+if (tiles.length === 0) {
+    addTile(); // Add an initial tile
+} else tileCount = tiles.length;
 updateTileList(); // Populate the GUI with the initial tile
 
 
@@ -229,12 +269,20 @@ updateTileList(); // Populate the GUI with the initial tile
 function initializeGUI() {
     // Add the "Add Tile" button
     gui.add({ addTile }, 'addTile').name('Add Tile');
+    gui.add({ save: saveTiles }, 'save').name('Save Tiles');
+    gui.add({ load: loadTiles }, 'load').name('Load Tiles');
 
     // Add audio sensitivity control
-    gui.add(params, 'audioSensitivity', 0, 10).name('Audio Sensitivity');
-    gui.add(params, 'audioThreshholdLow', 0, 1).name('Audio Threshhold Low');
-    gui.add(params, 'audioThreshholdMid', 0, 1).name('Audio Threshhold Mid');
-    gui.add(params, 'audioThreshholdHigh', 0, 1).name('Audio Threshhold High');
+    gui.add(params, 'audioSensitivityLow', -10, 10).name('Sensitivity Low (color change)');
+    gui.add(params, 'audioSensitivityMid', -10, 10).name('Sensitivity Mid (bloom radius)');
+    gui.add(params, 'audioSensitivityHigh', -10, 10).name('Sensitivity High (saturation)');
+
+    gui.add(params, 'changeColor').name('Change Color');
+    gui.add(params, 'changeSaturation').name('Change Saturation');
+    gui.add(params, 'changeLightness').name('Change Lightness');
+    gui.add(params, 'useBloom').name('Use Bloom');
+    gui.add(params, 'bpm', 60, 200).name('BPM');
+    gui.add(params, 'changeLightsUpTo', 0, 20).name('Change Lights Up To');
 
     // Add a color picker for general tile color change
     gui.addColor(params, 'tileColor').name('Global Tile Color').onChange((value) => {

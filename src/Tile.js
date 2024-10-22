@@ -6,10 +6,8 @@ export class Tile {
         this.originalColor = color; // Store original color
         this.color = color;
         this.geometry = new THREE.BufferGeometry();
-        this.material = new THREE.MeshStandardMaterial({
+        this.material = new THREE.MeshBasicMaterial({
             color: this.color,
-            emissive: this.color,
-            emissiveStrength: 1.0,
             side: THREE.DoubleSide,
         });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
@@ -44,14 +42,31 @@ export class Tile {
         this.geometry.attributes.position.needsUpdate = true;
     }
 
-    setCorner(index, x, y) {
-        this.corners[index] = { x, y };
-        this.updateGeometry();
+    // Method to serialize the tile object to a plain object
+    toObject() {
+        return {
+            id: this.id,
+            color: this.color,
+            corners: this.corners.map(corner => ({ x: corner.x, y: corner.y })),
+            position: {
+                x: this.mesh.position.x,
+                y: this.mesh.position.y,
+                z: this.mesh.position.z
+            }
+        };
+    }
+
+    // Static method to create a Tile from a plain object
+    static fromObject(data) {
+        const tile = new Tile(data.id, data.color);
+        tile.corners = data.corners;
+        tile.mesh.position.set(data.position.x, data.position.y, data.position.z);
+        tile.updateGeometry();
+        return tile;
     }
 
     setColor(color) {
         this.color = color;
         this.material.color.set(color);
-        this.material.emissive.set(color);
     }
 }
