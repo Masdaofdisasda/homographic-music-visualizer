@@ -70,3 +70,5 @@ export class Tile {
         this.material.color.set(color);
     }
 }
+
+export default Tile;

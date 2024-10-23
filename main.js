@@ -1,15 +1,21 @@
-const { app, BrowserWindow } = require('electron');
-const path = require('path');
+import { app, BrowserWindow } from 'electron';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function createWindow () {
     // Create the browser window.
     const win = new BrowserWindow({
         width: 800,
         height: 600,
+        show: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.src'),
             nodeIntegration: false, // Important for security
             contextIsolation: true, // Important for security
+            enableRemoteModule: false
         }
     });
 
@@ -17,7 +23,7 @@ function createWindow () {
     win.loadFile('dist/index.html');
 
     // Open the DevTools (optional)
-    // win.webContents.openDevTools();
+    win.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {

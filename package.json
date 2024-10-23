@@ -2,7 +2,8 @@
   "name": "music-visualization",
   "version": "1.0.0",
   "description": "",
-  "main": "src/main.js",
+  "main": "main.js",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -25,11 +26,11 @@
     "three": "^0.169.0"
   },
   "build": {
-    "appId": "com.yourdomain.musicvisualization",
+    "appId": "com.davidkoeppl.musicvisualization",
     "files": [
+      "src/**/*",
       "dist/**/*",
       "main.js",
-      "src/main.js",
       "preload.js"
     ],
     "mac": {

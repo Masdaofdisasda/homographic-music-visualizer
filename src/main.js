@@ -66,6 +66,11 @@ function saveTiles() {
     localStorage.setItem('tiles', JSON.stringify(tilesData));
 }
 
+function clearTiles() {
+    tiles = [];
+    localStorage.removeItem('tiles');
+}
+
 // Function to load tiles from localStorage
 function loadTiles() {
     const tilesData = JSON.parse(localStorage.getItem('tiles'));
@@ -229,7 +234,7 @@ function updateVisuals(normLowFreq, normMidFreq, normHighFreq) {
     if (params.changeLightness) {
         //directionalLight.intensity = 0.5 + normLowFreq * 0.5;
         bloomPass.strength = 0.1 +  normLowFreq * 0.2; // Increase bloom with bass
-        bloomPass.radius = 0.1 + normMidFreq * 0.2; // Adjust radius with mids
+        bloomPass.radius = normMidFreq * 0.2; // Adjust radius with mids
         //bloomPass.threshold = 0.7 - normHighFreq * 1.0; // Adjust threshold with highs
     }
 
@@ -271,6 +276,7 @@ function initializeGUI() {
     gui.add({ addTile }, 'addTile').name('Add Tile');
     gui.add({ save: saveTiles }, 'save').name('Save Tiles');
     gui.add({ load: loadTiles }, 'load').name('Load Tiles');
+    gui.add({ reset: clearTiles }, 'reset').name('Reset Tiles');
 
     // Add audio sensitivity control
     gui.add(params, 'audioSensitivityLow', -10, 10).name('Sensitivity Low (color change)');
