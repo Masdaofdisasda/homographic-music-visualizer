@@ -12,7 +12,7 @@ function createWindow () {
         height: 600,
         show: true,
         webPreferences: {
-            preload: path.join(__dirname, 'preload.src'),
+            preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false, // Important for security
             contextIsolation: true, // Important for security
             enableRemoteModule: false
@@ -23,7 +23,7 @@ function createWindow () {
     win.loadFile('dist/index.html');
 
     // Open the DevTools (optional)
-    win.webContents.openDevTools();
+    //win.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
