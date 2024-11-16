@@ -1,5 +1,5 @@
 {
-  "name": "music-visualization",
+  "name": "Homographic-Visualizer",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
@@ -27,7 +27,7 @@
     "three": "^0.169.0"
   },
   "build": {
-    "appId": "com.davidkoeppl.musicvisualization",
+    "appId": "com.davidkoeppl.homographic-visualizer",
     "files": [
       "src/**/*",
       "dist/**/*",
@@ -35,7 +35,23 @@
       "preload.js"
     ],
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "category": "public.app-category.graphics-design"
+    },
+    "dmg": {
+      "iconSize": 128,
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "win": {
       "target": "nsis"
