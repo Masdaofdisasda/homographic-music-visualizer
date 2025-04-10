@@ -13,14 +13,11 @@ function createWindow () {
         show: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: false, // Important for security
-            contextIsolation: true, // Important for security
-            enableRemoteModule: false
         }
     });
 
     // Load the local index.html
-    win.loadFile('dist/index.html');
+    win.loadFile(path.join(__dirname, '../dist/index.html'));
 
     // Open the DevTools (optional)
     //win.webContents.openDevTools();
