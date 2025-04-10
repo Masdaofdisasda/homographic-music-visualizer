@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Music Visualization Tool</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://threejs.org/build/three.module.js",
+            "three/addons/": "https://threejs.org/examples/jsm/",
+            "dat": "https://cdn.jsdelivr.net/npm/dat.gui@0.7.7/build/dat.gui.module.js"
+        }
+    }
+</script>
+  <script type="module" crossorigin src="/your-homographic-music-visualizer/assets/index-DhiFdXOm.js"></script>
+</head>
+<body>
+
+<div id="corner-handles"></div>
+
+<style>
+    #corner-handles {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
+    .corner-handle {
+        width: 25px;
+        height: 25px;
+        background: transparent;
+        position: absolute;
+        margin: -12.5px 0 0 -12.5px;
+        cursor: pointer;
+        pointer-events: all;
+    }
+</style>
+</body>
+</html>
